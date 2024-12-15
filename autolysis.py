@@ -13,7 +13,8 @@ load_dotenv()  # Load environment variables from .env file
 # Configure OpenAI API
 def configure_openai():
     openai.api_key = os.environ.get("AIPROXY_TOKEN")
-    openai.api_base = "https://api.openai.com/v1"  # Proxy or OpenAI API base URL
+    openai.api_base = "https://aiproxy.sanand.workers.dev/openai/v1"
+  # Proxy or OpenAI API base URL
     if not openai.api_key:
         raise ValueError("API key not set. Please ensure AIPROXY_TOKEN is in your .env file.")
 
@@ -22,11 +23,31 @@ def configure_openai():
 def query_llm(prompt):
     try:
         response = openai.ChatCompletion.create(
-            model="gpt-4",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
-            request_timeout=10
+            request_timeout=30
         )
-        return response["choices"][0]["message"]["content"]
+        
+        # Check and log the full response object for debugging
+        print("Full response:", response)
+
+        # Ensure response contains the necessary 'choices' key
+        if response and 'choices' in response:
+            choice_content = response['choices'][0]['message']['content']
+            print("Response content:", choice_content)
+        else:
+            print("Unexpected response format:", response)
+            return None
+        
+        # Safely check if 'headers' exist in response
+        headers = response.headers if hasattr(response, 'headers') else {}
+        cost = headers.get("cost", "Unknown")
+        monthly_cost = headers.get("monthlyCost", "Unknown")
+        
+        print(f"Request cost: ${cost}, Monthly cost: ${monthly_cost}")
+
+        return choice_content
+
     except Exception as e:
         print(f"OpenAI API error: {e}")
         return None
